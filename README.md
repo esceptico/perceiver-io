@@ -1,4 +1,4 @@
-#Perceiver IO
+# Perceiver IO
 Unofficial implementation of 
 [Perceiver IO: A General Architecture for Structured Inputs & Outputs](https://arxiv.org/abs/2107.14795)
 
