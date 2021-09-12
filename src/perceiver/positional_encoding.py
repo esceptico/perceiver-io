@@ -7,7 +7,8 @@ import torch
 def fourier_encoding(
     dims: Sequence[int],
     num_bands: int,
-    resolutions: Sequence[int]
+    resolutions: Sequence[int],
+    concatenate_positions: bool = True
 ) -> torch.Tensor:
     """Generate Fourier positional encodings.
 
@@ -15,6 +16,8 @@ def fourier_encoding(
         dims: Sequence of dimensions.
         num_bands: Number of frequency bands.
         resolutions: Sequence of resolutions for each dimension.
+        concatenate_positions: Indicates whether to concatenate positions to
+            the encodings. Defaults to True.
 
     Returns:
         Tensor of shape (dims[0], ..., dims[d], num_bands * D)
@@ -27,6 +30,7 @@ def fourier_encoding(
     ranges = [torch.linspace(-1, 1, dim) for dim in dims]
     grid = torch.meshgrid(*ranges)
     grid = torch.stack(grid, dim=-1)
+    print(grid)
 
     # frequency bands for each resolution of shape (len(resolutions), num_bands)
     freq_bands = torch.stack([
@@ -43,4 +47,7 @@ def fourier_encoding(
     # reshape the encodings as a tensor of shape
     # (dims[0], dims[1], ..., dims[d], num_bands * D)
     features = features.view(*grid.shape[:-1], -1)
+
+    if concatenate_positions:
+        features = torch.cat([features, grid], dim=-1)
     return features
