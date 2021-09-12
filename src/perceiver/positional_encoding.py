@@ -14,7 +14,7 @@ def fourier_encoding(
     Args:
         dims: Sequence of dimensions.
         num_bands: Number of frequency bands.
-        resolution: Sequence of resolutions for each dimension.
+        resolutions: Sequence of resolutions for each dimension.
 
     Returns:
         Tensor of shape (dims[0], ..., dims[d], num_bands * D)
