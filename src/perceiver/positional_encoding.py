@@ -42,7 +42,7 @@ def fourier_encoding(
     features = grid[..., None] * freq_bands[None, ...]
     sin = torch.sin(features * math.pi)
     cos = torch.cos(features * math.pi)
-    features = cos  # torch.cat([sin, cos], dim=-1)
+    features = torch.cat([sin, cos], dim=-1)
 
     # reshape the encodings as a tensor of shape
     # (dims[0], dims[1], ..., dims[d], num_bands * D)
