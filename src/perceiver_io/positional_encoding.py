@@ -30,7 +30,6 @@ def fourier_encoding(
     ranges = [torch.linspace(-1, 1, dim) for dim in dims]
     grid = torch.meshgrid(*ranges)
     grid = torch.stack(grid, dim=-1)
-    print(grid)
 
     # frequency bands for each resolution of shape (len(resolutions), num_bands)
     freq_bands = torch.stack([
