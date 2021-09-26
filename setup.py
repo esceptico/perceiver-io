@@ -8,7 +8,7 @@ def parse_requirements(path: str = 'requirements.txt'):
 
 setup(
     name='perceiver-io-pytorch',
-    version='0.1.0',
+    version='0.1.1',
     packages=['perceiver_io'],
     package_dir={'': 'src'},
     url='https://github.com/esceptico/perceiver-io',
