@@ -3,21 +3,27 @@ Unofficial implementation of
 [Perceiver IO: A General Architecture for Structured Inputs & Outputs](https://arxiv.org/abs/2107.14795)
 
 
+# Installation
+**From PyPI**
+```shell
+pip install -U perceiver-io-pytorch
+```
+
+
 # Usage
+
 ```python
 import torch
 
-from src.perceiver.decoders import PerceiverDecoder
-from src.perceiver.encoder import PerceiverEncoder
-from src.perceiver import PerceiverIO
-
+from perceiver_io.decoders import PerceiverDecoder
+from perceiver_io.encoder import PerceiverEncoder
+from perceiver_io import PerceiverIO
 
 num_latents = 128
 latent_dim = 256
 input_dim = 64
 
 decoder_query_dim = 4
-
 
 encoder = PerceiverEncoder(
     num_latents=num_latents,
