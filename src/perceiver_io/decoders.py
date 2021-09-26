@@ -4,7 +4,7 @@ from typing import Optional
 import torch
 from torch import nn
 
-from src.perceiver.attention import CrossAttention
+from perceiver_io.attention import CrossAttention
 
 
 class BasePerceiverDecoder(nn.Module, metaclass=ABCMeta):
