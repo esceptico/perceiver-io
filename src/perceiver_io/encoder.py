@@ -18,9 +18,9 @@ class PerceiverEncoder(nn.Module):
         input_dim: int,
         num_self_attn_per_block: int = 2,
         num_blocks: int = 4,
-        cross_attn_head_dim: Optional[int] = None,
+        qk_out_dim: Optional[int] = None,
+        v_out_dim: Optional[int] = None,
         num_cross_attn_heads: int = 1,
-        self_attn_head_dim: Optional[int] = None,
         num_self_attn_heads: int = 8,
         cross_attn_widening_factor: int = 1,
         self_attn_widening_factor: int = 1,
@@ -38,14 +38,15 @@ class PerceiverEncoder(nn.Module):
             num_self_attn_per_block: Number of self-attention modules per
                 transformer block. Defaults to 2.
             num_blocks: Number of transformer blocks. Defaults to 4.
+            qk_out_dim: Size of Query and Key matrices last dimension.
+                Defaults to None.
+            v_out_dim: Size of Value matrix last dimension.
+                Defaults to None.
             cross_attn_head_dim: Size of cross-attention head. If None,this
                 value will be calculated as latent_dim / num_cross_attn_heads.
                 Defaults to None.
             num_cross_attn_heads: Number of cross-attention heads.
                 Defaults to 1.
-            self_attn_head_dim: Size of self-attention head. If None,this
-                value will be calculated as latent_dim / num_self_attn_heads.
-                Defaults to None.
             num_self_attn_heads: Number of self-attention heads.
                 Defaults to 8.
             cross_attn_widening_factor: Widening factor in cross-attention
@@ -69,7 +70,8 @@ class PerceiverEncoder(nn.Module):
             q_dim=latent_dim,
             widening_factor=cross_attn_widening_factor,
             num_heads=num_cross_attn_heads,
-            head_dim=cross_attn_head_dim,
+            qk_out_dim=qk_out_dim,
+            v_out_dim=v_out_dim,
             use_query_residual=use_query_residual,
             dropout=dropout,
             attention_dropout=cross_attention_dropout
@@ -79,7 +81,8 @@ class PerceiverEncoder(nn.Module):
                 hidden_dim=latent_dim,
                 widening_factor=self_attn_widening_factor,
                 num_heads=num_self_attn_heads,
-                head_dim=self_attn_head_dim,
+                qk_out_dim=qk_out_dim,
+                v_out_dim=v_out_dim,
                 dropout=dropout,
                 attention_dropout=self_attention_dropout
             ) for _ in range(num_self_attn_per_block)
