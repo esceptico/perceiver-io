@@ -46,7 +46,8 @@ class PerceiverDecoder(BasePerceiverDecoder):
         query_dim: int,
         widening_factor: int = 1,
         num_heads: int = 1,
-        head_dim: Optional[int] = None,
+        qk_out_dim: Optional[int] = None,
+        v_out_dim: Optional[int] = None,
         projection_dim: Optional[int] = None,
         use_query_residual: bool = False
     ):
@@ -56,7 +57,8 @@ class PerceiverDecoder(BasePerceiverDecoder):
             q_dim=query_dim,
             widening_factor=widening_factor,
             num_heads=num_heads,
-            head_dim=head_dim,
+            qk_out_dim=qk_out_dim,
+            v_out_dim=v_out_dim,
             use_query_residual=use_query_residual
         )
         if projection_dim is not None:
