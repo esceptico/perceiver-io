@@ -1,3 +1,6 @@
+# Perceiver LM
+Contains PyTorch implementation of PerceiverLM (Language Modelling Perceiver), adapted from PerceiverIO model of [esceptico](https://github.com/esceptico)'s [perceiver-io](https://github.com/esceptico/perceiver-io) repo. The PerceiverLM model in this repo is functionally exact PyTorch replica of [original](https://github.com/deepmind/deepmind-research/tree/master/perceiver) PereciverIO's JAX implementation. Code snippet for loading deepmind's pretrained checkpoint can be found in this [notebook](pretrained_perceiver-io_lm.ipynb).
+
 # Perceiver IO
 Unofficial implementation of 
 [Perceiver IO: A General Architecture for Structured Inputs & Outputs](https://arxiv.org/abs/2107.14795)
