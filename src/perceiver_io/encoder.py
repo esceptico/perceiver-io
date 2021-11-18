@@ -42,9 +42,6 @@ class PerceiverEncoder(nn.Module):
                 Defaults to None.
             v_out_dim: Size of Value matrix last dimension.
                 Defaults to None.
-            cross_attn_head_dim: Size of cross-attention head. If None,this
-                value will be calculated as latent_dim / num_cross_attn_heads.
-                Defaults to None.
             num_cross_attn_heads: Number of cross-attention heads.
                 Defaults to 1.
             num_self_attn_heads: Number of self-attention heads.
