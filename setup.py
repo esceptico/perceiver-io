@@ -3,7 +3,7 @@ from setuptools import setup
 
 setup(
     name='perceiver-io-pytorch',
-    version='0.1.3rc1',
+    version='0.1.4',
     packages=['perceiver_io'],
     package_dir={'': 'src'},
     url='https://github.com/esceptico/perceiver-io',
