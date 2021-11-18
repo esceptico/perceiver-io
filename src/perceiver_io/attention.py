@@ -71,7 +71,7 @@ class MultiHeadAttention(nn.Module):
         k = rearrange(k, 'b s (n h) -> b n s h', h=self.qk_head_dim)
         q = rearrange(q, 'b s (n h) -> b n s h', h=self.qk_head_dim)
         v = rearrange(v, 'b s (n h) -> b n s h', h=self.v_head_dim)
-        attention = (q @ k.transpose(-2, -1) / self.scale)
+        attention = (q @ k.transpose(-2, -1) * self.scale)
         if attention_mask is not None:
             min_value = torch.finfo(attention.dtype).min
             extended_mask = (1 - attention_mask) * min_value
