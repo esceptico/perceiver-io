@@ -1,8 +1,6 @@
 import pickle
 with open("deepmind_assets/language_perceiver_io_bytes.pickle", "rb") as f:
     params = pickle.loads(f.read())
-#import argparse
-#import pytorch_lightning as pl
 from perceiver_io.perceiver_im import PerceiverLM
 #from data import MNISTDataModule
 import torch.nn as nn
@@ -27,17 +25,6 @@ testset = torchvision.datasets.STL10(root='./data', split='test',
 trainset, validset = torch.utils.data.random_split(trainset, 
                                                       [int(len(trainset)*0.8),len(trainset)- 
                                                       int(len(trainset)*0.8)])
-#parser = argparse.ArgumentParser(formatter_class=argparse.ArgumentDefaultsHelpFormatter)
-#parser = pl.Trainer.add_argparse_args(parser)
-#parser = MNISTDataModule.setup_parser(parser)
-#parser = pl.Trainer.add_argparse_args(parser)
-#data_module = MNISTDataModule.create(args)
-#group = parser.add_argument_group('main')
-#group.add_argument('--experiment', default='img_clf', help=' ')
-# Ignored at the moment, dataset is hard-coded ...
-#group.add_argument('--dataset', default='mnist', choices=['mnist'], help=' ')
-#args = parser.parse_args()
-#data_module = MNISTDataModule.create(args)
 dims = (3, 32, 32)
 batch_size = 1
 trainloader = torch.utils.data.DataLoader(trainset, batch_size=batch_size,
@@ -46,16 +33,6 @@ validloader = torch.utils.data.DataLoader(validset, batch_size=batch_size,
                                             shuffle=False,num_workers=2)
 testloader = torch.utils.data.DataLoader(testset, batch_size=batch_size,
                                           shuffle=False, num_workers=2)
-# model = PerceiverLM(image_shape=dims,
-#                     num_classes=NUM_CLASSES,
-#                     num_frequency_bands=262, #not sure what num frequence band should be vocab_size  or max_seq_len or 32
-#                     vocab_size=262, 
-#                     max_seq_len=2048, 
-#                     embedding_dim=768, 
-#                     num_latents=768, 
-#                     latent_dim=1280,#NUM_CLASSES, 
-#                     qk_out_dim=256, 
-#                     num_self_attn_per_block=26)
 model = PerceiverLM(vocab_size=262, max_seq_len=2048, embedding_dim=768, num_latents=256, latent_dim=1280,qk_out_dim=256, num_self_attn_per_block=26)
 state_dict = {}
 model_enc_base = 'perceiver.encoder.'
@@ -105,10 +82,54 @@ for i in range(26):
 state_dict = {k: torch.tensor(v) for k,v in state_dict.items()}
 
 model.load_state_dict(state_dict)
+optimizer = torch.optim.SGD(model.parameters(), lr=1e-3 , momentum=0.9, weight_decay=1e-4)
+NUM_EPOCHS = 1
+for epoch in range(NUM_EPOCHS):
+    model.train()
+    correct_images = 0
+    total_images = 0
+    training_loss = 0
+    LRlistIteration = []
+    trainLossIteration = []
+    for batch_index, (images, labels) in enumerate(trainloader):
+        optimizer.zero_grad()
+        outputs = model(images)
+        loss = criterion(outputs, labels)
+        loss.backward()
+        optimizer.step()
+        training_loss += loss.item()
+        _, predicted = outputs.max(1)
+        total_images += labels.size(0)
+        correct_images += predicted.eq(labels).sum().item()
+        print('Epoch: %d, Batch: %d, Loss: %.3f, '
+                        'Accuracy: %.3f%% (%d/%d)' % (epoch, batch_index, training_loss/(batch_index+1),
+                                                100.*correct_images/total_images, correct_images, total_images))
+        trainLossIteration.append(training_loss/(batch_index+1))
+
+for epoch in range(NUM_EPOCHS):
+    model.eval()
+    validation_running_loss = 0.0
+    total_images = 0
+    correct_images = 0
+    valLossIteration = []
+    with torch.no_grad():
+        for batch_index, (images, labels) in enumerate(validloader):
+            # images, labels = images.to(device), labels.to(device)
+            outputs = model(images)
+            loss = criterion(outputs, labels)
+
+            validation_running_loss += loss.item()
+            _, predicted = outputs.max(1)
+            total_images += labels.size(0)
+            correct_images += predicted.eq(labels).sum().item()
+            print('Epoch: %d, Batch: %d, Loss: %.3f, '
+                    'Accuracy: %.3f%% (%d/%d)' % (epoch, batch_index, validation_running_loss/(batch_index+1),
+                                            100.*correct_images/total_images, correct_images, total_images))
+            valLossIteration.append(validation_running_loss/(batch_index+1))
+            epoch_loss = validation_running_loss / (batch_index+1)
 
 model.eval()
 print(torch.tensor(inputs).size())
-#one way
 test_loss = 0
 total_images = 0
 correct_images = 0
@@ -125,17 +146,4 @@ with torch.no_grad():
                 % (test_loss/(batch_index+1), 100.*correct_images/total_images, correct_images, total_images))
         test_accuracy = 100.*correct_images/total_images
 print("accuracy of test set is",test_accuracy)
-#return test_loss/(batch_index+1)
-#out = model.forward(torch.tensor(testloader))
-
-#other way
-# plugins = pl.plugins.DDPPlugin(find_unused_parameters=False)
-# logger = pl.loggers.TensorBoardLogger("logs", name=args.experiment)
-# callbacks = [model_checkpoint_callback(save_top_k=1)]
-# args = parser.parse_args()
-# if args.one_cycle_lr:
-#     callbacks.append(learning_rate_monitor_callback())
-
-# trainer = pl.Trainer.from_argparse_args(args, plugins=plugins, callbacks=callbacks, logger=logger)
-# trainer.fit(model, data_module)
 
