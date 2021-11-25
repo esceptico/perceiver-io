@@ -83,6 +83,7 @@ state_dict = {k: torch.tensor(v) for k,v in state_dict.items()}
 
 model.load_state_dict(state_dict)
 optimizer = torch.optim.SGD(model.parameters(), lr=1e-3 , momentum=0.9, weight_decay=1e-4)
+criterion = nn.CrossEntropyLoss()
 NUM_EPOCHS = 1
 for epoch in range(NUM_EPOCHS):
     model.train()
@@ -117,7 +118,6 @@ for epoch in range(NUM_EPOCHS):
             # images, labels = images.to(device), labels.to(device)
             outputs = model(images)
             loss = criterion(outputs, labels)
-
             validation_running_loss += loss.item()
             _, predicted = outputs.max(1)
             total_images += labels.size(0)
