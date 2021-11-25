@@ -29,10 +29,10 @@ class PerceiverLM(nn.Module):
         dropout: float = 0.0
     ):
         super().__init__()
-        # self.token_embedding = nn.Embedding(vocab_size, embedding_dim)
-        # self.position_embedding = nn.Embedding(max_seq_len, embedding_dim)
-        # self.query_embedding = nn.Embedding(max_seq_len, embedding_dim)
-        # self.decoder_token_bias = nn.Parameter(torch.randn(vocab_size))
+        self.token_embedding = nn.Embedding(vocab_size, embedding_dim)
+        self.position_embedding = nn.Embedding(max_seq_len, embedding_dim)
+        self.query_embedding = nn.Embedding(max_seq_len, embedding_dim)
+        self.decoder_token_bias = nn.Parameter(torch.randn(vocab_size))
         if v_out_dim is None: v_out_dim = latent_dim
         input_adapter = ImageInputAdapter(
             image_shape=image_shape,
@@ -81,18 +81,27 @@ class PerceiverLM(nn.Module):
         Returns:
             Tensor of shape (batch_size, seq_len, vocab_size).
         """
-        seq_len = inputs.size(1)
-        pos = input_adapter._positions()
-        enc = input_adapter._position_encodings(pos)
-        enc = rearrange(enc, '... c -> (...) c')
-        position_embeddings = enc
-        query_embeddings = enc
-        b = 1 #for now one batch size
-        x = input_adapter.image_shape
-        x_enc = repeat(position_embeddings, '... -> b ...', b=b)
-        x = rearrange(x, 'b ... c -> b (...) c')
-        token_embedding = x
-        embeddings = torch.cat([x, x_enc], dim=-1)
+        # seq_len = inputs.size(1)
+        # pos = input_adapter._positions()
+        # enc = input_adapter._position_encodings(pos)
+        # enc = rearrange(enc, '... c -> (...) c')
+        # position_embeddings = enc
+        # query_embeddings = enc
+        # b = 1 #for now one batch size
+        # x = input_adapter.image_shape
+        # x_enc = repeat(position_embeddings, '... -> b ...', b=b)
+        # x = rearrange(x, 'b ... c -> b (...) c')
+        # token_embedding = x
+        # embeddings = torch.cat([x, x_enc], dim=-1)
+        input_adapter = ImageInputAdapter(
+            image_shape=torch.tensor(inputs).size(),#image_shape
+            num_frequency_bands=262)#args.num_frequency_bands)
+        print(torch.tensor(input_adapter))
+        token_embeddings = self.token_embedding(input_adapter)
+        positions_ids = torch.arange(seq_len, device=inputs.device).view(1, -1)
+        position_embeddings = self.position_embedding(positions_ids)
+        embeddings = token_embeddings + position_embeddings
+        query_embeddings = self.query_embedding(positions_ids)
         outputs = self.perceiver(
             inputs=embeddings,
             query=query_embeddings,
@@ -100,9 +109,9 @@ class PerceiverLM(nn.Module):
             query_mask=mask
         )
         #not sure if this is token embedding
-        logits = torch.matmul(outputs, self.token_embedding.weight.T)
-        decoder_token_bias = nn.Parameter(torch.randn(logits.size))
-        logits = logits + decoder_token_bias
+        # logits = torch.matmul(outputs, self.token_embedding.weight.T)
+        # decoder_token_bias = nn.Parameter(torch.randn(logits.size))
+        # logits = logits + decoder_token_bias
         #apply softmax layer
-
+        logits = torch.matmul(outputs, self.token_embedding.weight.T) + self.decoder_token_bias
         return logits

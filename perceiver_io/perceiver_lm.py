@@ -67,8 +67,14 @@ class PerceiverLM(nn.Module):
         Returns:
             Tensor of shape (batch_size, seq_len, vocab_size).
         """
-        seq_len = inputs.size(1)
-        token_embeddings = self.token_embedding(inputs)
+        input_adapter = ImageInputAdapter(
+            image_shape=torch.tensor(inputs).size(),#image_shape
+            num_frequency_bands=262)#args.num_frequency_bands)
+        print(torch.tensor(input_adapter))
+        #seq_len = inputs.size(1)
+        #token_embeddings = self.token_embedding(inputs)
+        seq_len = input_adapter.size(1)
+        token_embeddings = self.token_embedding(input_adapter)
         positions_ids = torch.arange(seq_len, device=inputs.device).view(1, -1)
         position_embeddings = self.position_embedding(positions_ids)
         embeddings = token_embeddings + position_embeddings

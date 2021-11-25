@@ -46,25 +46,25 @@ validloader = torch.utils.data.DataLoader(validset, batch_size=batch_size,
                                             shuffle=False,num_workers=2)
 testloader = torch.utils.data.DataLoader(testset, batch_size=batch_size,
                                           shuffle=False, num_workers=2)
-model = PerceiverLM(image_shape=dims,
-                    num_classes=NUM_CLASSES,
-                    num_frequency_bands=262, #not sure what num frequence band should be vocab_size  or max_seq_len or 32
-                    vocab_size=262, 
-                    max_seq_len=2048, 
-                    embedding_dim=768, 
-                    num_latents=768, 
-                    latent_dim=1280,#NUM_CLASSES, 
-                    qk_out_dim=256, 
-                    num_self_attn_per_block=26)
-
+# model = PerceiverLM(image_shape=dims,
+#                     num_classes=NUM_CLASSES,
+#                     num_frequency_bands=262, #not sure what num frequence band should be vocab_size  or max_seq_len or 32
+#                     vocab_size=262, 
+#                     max_seq_len=2048, 
+#                     embedding_dim=768, 
+#                     num_latents=768, 
+#                     latent_dim=1280,#NUM_CLASSES, 
+#                     qk_out_dim=256, 
+#                     num_self_attn_per_block=26)
+model = PerceiverLM(vocab_size=262, max_seq_len=2048, embedding_dim=768, num_latents=256, latent_dim=1280,qk_out_dim=256, num_self_attn_per_block=26)
 state_dict = {}
 model_enc_base = 'perceiver.encoder.'
 params_enc_base = 'perceiver_encoder/~/'
 
-#state_dict['token_embedding.weight'] = params['embed']['embeddings']
-#state_dict['decoder_token_bias'] = params['embedding_decoder']['bias']
-#state_dict['position_embedding.weight'] = params['trainable_position_encoding']['pos_embs']
-#state_dict['query_embedding.weight'] = params['basic_decoder/~/trainable_position_encoding']['pos_embs']
+state_dict['token_embedding.weight'] = params['embed']['embeddings']
+state_dict['decoder_token_bias'] = params['embedding_decoder']['bias']
+state_dict['position_embedding.weight'] = params['trainable_position_encoding']['pos_embs']
+state_dict['query_embedding.weight'] = params['basic_decoder/~/trainable_position_encoding']['pos_embs']
 state_dict[f'{model_enc_base}latents'] = params[f'{params_enc_base}trainable_position_encoding']['pos_embs']
 
 def copy_attention_params(model_base, params_base):
@@ -107,11 +107,11 @@ state_dict = {k: torch.tensor(v) for k,v in state_dict.items()}
 model.load_state_dict(state_dict)
 
 model.eval()
+print(torch.tensor(inputs).size())
 #one way
 test_loss = 0
 total_images = 0
 correct_images = 0
-net.eval()
 with torch.no_grad():
     for batch_index, (images, labels) in enumerate(testloader):
         images, labels = images.to(device), labels.to(device)
