@@ -33,20 +33,24 @@ class OutputAdapter(nn.Module):
 
 
 class ImageInputAdapter(InputAdapter):
-    def __init__(self, image_shape: Tuple[int, ...], num_frequency_bands: int):
+    def __init__(self, image_shape: Tuple[int, ...], num_frequency_bands: int = 1):
         *self.spatial_shape, num_image_channels = image_shape
         self.image_shape = image_shape
         self.num_frequency_bands = num_frequency_bands
-
+        print("spatial spacce is", self.spatial_shape)
+        print("num image channel is", num_image_channels)
+        print("num frequency band is", num_frequency_bands)
         super().__init__(num_input_channels=num_image_channels + self._num_position_encoding_channels())
-
+        print("posiion encode channel is", self._num_position_encoding_channels())
         # create encodings for single example
+        #print("num_input_channels is", num_input_channels())
         pos = self._positions()
+        print("self.position is",pos.shape)
         enc = self._position_encodings(pos)
 
         # flatten encodings along spatial dimensions
         enc = rearrange(enc, '... c -> (...) c')
-
+        print("enc shape is", enc.shape)
         # position encoding prototype
         self.register_buffer('position_encoding', enc)
 
@@ -64,7 +68,7 @@ class ImageInputAdapter(InputAdapter):
     def _position_encodings(self,
                             p: torch.Tensor,
                             max_frequencies: Optional[Tuple[int, ...]] = None,
-                            include_positions: bool = True) -> torch.Tensor:
+                            include_positions: bool = False) -> torch.Tensor:
         """
         Fourier-encode positions p using self.num_bands frequency bands.
 
@@ -80,23 +84,26 @@ class ImageInputAdapter(InputAdapter):
             max_frequencies = p.shape[:-1]
 
         frequencies = [torch.linspace(1.0, max_freq / 2.0, self.num_frequency_bands, device=p.device) for max_freq in max_frequencies]
+        print("len frequencies is", len(frequencies))
         frequency_grids = []
 
         for i, frequencies_i in enumerate(frequencies):
             frequency_grids.append(p[..., i:i + 1] * frequencies_i[None, ...])
-
+        print("frequency grids is", len(frequency_grids))
         if include_positions:
             encodings.append(p)
-
+        print("encoding is", len(encodings))
         encodings.extend([torch.sin(math.pi * frequency_grid) for frequency_grid in frequency_grids])
+        print("first extend encode is", len(encodings))
         encodings.extend([torch.cos(math.pi * frequency_grid) for frequency_grid in frequency_grids])
-
+        print("second extend encode is", len(encodings))
         return torch.cat(encodings, dim=-1)
 
-    def _num_position_encoding_channels(self, include_positions: bool = True) -> int:
+    def _num_position_encoding_channels(self, include_positions: bool = False) -> int:
         return len(self.spatial_shape) * (2 * self.num_frequency_bands + include_positions)
 
     def forward(self, x):
+        print("x shape is", x.shape)
         b, *d = x.shape
 
         if tuple(d) != self.image_shape:
@@ -106,6 +113,9 @@ class ImageInputAdapter(InputAdapter):
         x_enc = repeat(self.position_encoding, '... -> b ...', b=b)
 
         x = rearrange(x, 'b ... c -> b (...) c')
+        print("x shape is", x.shape)
+        print("x_enc shape is",x_enc.shape)
+        print(torch.cat([x, x_enc], dim=-1))
         return torch.cat([x, x_enc], dim=-1)
 
 

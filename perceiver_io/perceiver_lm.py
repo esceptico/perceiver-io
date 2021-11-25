@@ -2,8 +2,8 @@ from typing import Optional
 import torch
 from torch import nn
 
-from perceiver_io import PerceiverEncoder, PerceiverDecoder, PerceiverIO
-
+from perceiver_io import PerceiverEncoder, PerceiverDecoder, PerceiverIO, ClassificationDecoder
+from perceiver_io.adapter import ImageInputAdapter, ClassificationOutputAdapter
 class PerceiverLM(nn.Module):
     """Encoder-decoder based language model."""
     def __init__(
@@ -45,6 +45,7 @@ class PerceiverLM(nn.Module):
             dropout=dropout,
         )
         decoder = PerceiverDecoder(
+            #num_classes=10,
             latent_dim=latent_dim,
             query_dim=embedding_dim,
             qk_out_dim=qk_out_dim,
@@ -67,14 +68,30 @@ class PerceiverLM(nn.Module):
         Returns:
             Tensor of shape (batch_size, seq_len, vocab_size).
         """
+        #print("input size is",inputs.size())
+        #inputs = torch.sum(inputs, dim=0)#.reshape(1,32,32)
+        print("after transform size is", inputs.size())
         input_adapter = ImageInputAdapter(
-            image_shape=torch.tensor(inputs).size(),#image_shape
-            num_frequency_bands=262)#args.num_frequency_bands)
-        print(torch.tensor(input_adapter))
+            image_shape=torch.squeeze(inputs).shape,#image_shape assuming bs = 1 which hasto be for pretrained weights
+            num_frequency_bands=256)#args.num_frequency_bands)
+        print("input_adapter", input_adapter)
+        image_adapter = input_adapter.forward(inputs)
+        #image_adapter = image_adapter.reshape(1,6144)#torch.mean(image_adapter, 1)
+        #image_adapter = image_adapter[:, :2048]
         #seq_len = inputs.size(1)
         #token_embeddings = self.token_embedding(inputs)
-        seq_len = input_adapter.size(1)
-        token_embeddings = self.token_embedding(input_adapter)
+        #print("input type is ",inputs.type)
+        #print(image_adapter)
+        #print("input adapter type is ",image_adapter)
+        print("image adapter shape is ",image_adapter.shape)
+        #image_adapter = image_adapter.reshape(1,103872)
+        seq_len = image_adapter.shape[1]
+        fst = torch.squeeze(image_adapter)
+        linear0 = nn.Linear(image_adapter.shape[2],768)
+        token_embeddings = linear0(fst)
+        print("token embeddings shape is", token_embeddings.shape)
+        #token_embeddings = torch.rand(1,2048,768)
+        #token_embeddings = self.token_embedding(image_adapter)
         positions_ids = torch.arange(seq_len, device=inputs.device).view(1, -1)
         position_embeddings = self.position_embedding(positions_ids)
         embeddings = token_embeddings + position_embeddings
@@ -85,5 +102,16 @@ class PerceiverLM(nn.Module):
             input_mask=mask,
             query_mask=mask
         )
+        print(outputs.shape)
         logits = torch.matmul(outputs, self.token_embedding.weight.T) + self.decoder_token_bias
-        return logits
+        print(logits.shape)
+        last = logits.reshape(1,image_adapter.shape[1]*logits.shape[2]);
+        print(last.shape)
+        #output_adapter = ClassificationOutputAdapter(
+        #    num_classes=10,
+         #   num_output_channels=262) 
+        linear1 = nn.Linear(image_adapter.shape[1]*logits.shape[2],10)
+        output = linear1(last)
+        #out = output_adapter.forward(logits)
+        print(output.shape)
+        return output;
