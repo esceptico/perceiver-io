@@ -1,29 +1,59 @@
 import pickle
 with open("deepmind_assets/language_perceiver_io_bytes.pickle", "rb") as f:
     params = pickle.loads(f.read())
-
-from perceiver_io.perceiver_lm import PerceiverLM
-from data import MNISTDataModule
+#import argparse
+#import pytorch_lightning as pl
+from perceiver_io.perceiver_im import PerceiverLM
+#from data import MNISTDataModule
 import torch.nn as nn
 import torch
+import torchvision
+import torchvision.transforms as transforms
+from sklearn.model_selection import train_test_split
+import matplotlib.pyplot as plt
 
 
-parser = argparse.ArgumentParser(formatter_class=argparse.ArgumentDefaultsHelpFormatter)
-parser = pl.Trainer.add_argparse_args(parser)
-data_module = MNISTDataModule.create(args)
-group = parser.add_argument_group('main')
-group.add_argument('--experiment', default='img_clf', help=' ')
+transform_train = transforms.Compose([
+transforms.RandomCrop(32, padding=4),
+transforms.RandomHorizontalFlip(),
+transforms.ToTensor(),
+transforms.Normalize((0.4914, 0.4822, 0.4465), (0.2023, 0.1994, 0.2010)),
+])
+NUM_CLASSES=10
+trainset = torchvision.datasets.STL10(root='./data',  split='train',
+                                          download=False, transform=transform_train)
+testset = torchvision.datasets.STL10(root='./data', split='test',
+                                          download=False, transform=transform_train)
+trainset, validset = torch.utils.data.random_split(trainset, 
+                                                      [int(len(trainset)*0.8),len(trainset)- 
+                                                      int(len(trainset)*0.8)])
+#parser = argparse.ArgumentParser(formatter_class=argparse.ArgumentDefaultsHelpFormatter)
+#parser = pl.Trainer.add_argparse_args(parser)
+#parser = MNISTDataModule.setup_parser(parser)
+#parser = pl.Trainer.add_argparse_args(parser)
+#data_module = MNISTDataModule.create(args)
+#group = parser.add_argument_group('main')
+#group.add_argument('--experiment', default='img_clf', help=' ')
 # Ignored at the moment, dataset is hard-coded ...
-group.add_argument('--dataset', default='mnist', choices=['mnist'], help=' ')
-
-model = PerceiverLM(image_shape=data_module.dims,
-                    num_classes=data_module.num_classes,
+#group.add_argument('--dataset', default='mnist', choices=['mnist'], help=' ')
+#args = parser.parse_args()
+#data_module = MNISTDataModule.create(args)
+dims = (3, 32, 32)
+batch_size = 1
+trainloader = torch.utils.data.DataLoader(trainset, batch_size=batch_size,
+                                            shuffle=True, num_workers=2)
+validloader = torch.utils.data.DataLoader(validset, batch_size=batch_size,
+                                            shuffle=False,num_workers=2)
+testloader = torch.utils.data.DataLoader(testset, batch_size=batch_size,
+                                          shuffle=False, num_workers=2)
+model = PerceiverLM(image_shape=dims,
+                    num_classes=NUM_CLASSES,
                     num_frequency_bands=262, #not sure what num frequence band should be vocab_size  or max_seq_len or 32
                     vocab_size=262, 
                     max_seq_len=2048, 
                     embedding_dim=768, 
-                    num_latents=256, 
-                    latent_dim=1280, 
+                    num_latents=768, 
+                    latent_dim=1280,#NUM_CLASSES, 
                     qk_out_dim=256, 
                     num_self_attn_per_block=26)
 
@@ -31,10 +61,10 @@ state_dict = {}
 model_enc_base = 'perceiver.encoder.'
 params_enc_base = 'perceiver_encoder/~/'
 
-state_dict['token_embedding.weight'] = params['embed']['embeddings']
-state_dict['decoder_token_bias'] = params['embedding_decoder']['bias']
-state_dict['position_embedding.weight'] = params['trainable_position_encoding']['pos_embs']
-state_dict['query_embedding.weight'] = params['basic_decoder/~/trainable_position_encoding']['pos_embs']
+#state_dict['token_embedding.weight'] = params['embed']['embeddings']
+#state_dict['decoder_token_bias'] = params['embedding_decoder']['bias']
+#state_dict['position_embedding.weight'] = params['trainable_position_encoding']['pos_embs']
+#state_dict['query_embedding.weight'] = params['basic_decoder/~/trainable_position_encoding']['pos_embs']
 state_dict[f'{model_enc_base}latents'] = params[f'{params_enc_base}trainable_position_encoding']['pos_embs']
 
 def copy_attention_params(model_base, params_base):
@@ -78,7 +108,25 @@ model.load_state_dict(state_dict)
 
 model.eval()
 #one way
-out = model.forward(torch.tensor(inputs))
+test_loss = 0
+total_images = 0
+correct_images = 0
+net.eval()
+with torch.no_grad():
+    for batch_index, (images, labels) in enumerate(testloader):
+        images, labels = images.to(device), labels.to(device)
+        outputs = model.forward(torch.tensor(images))
+        loss = criterion(outputs, labels)
+        test_loss += loss.item()
+        _, predicted = outputs.max(1)
+        total_images += labels.size(0)
+        correct_images += predicted.eq(labels).sum().item()
+        print(batch_index, len(testloader), 'Loss: %.3f | Accuracy: %.3f%% (%d/%d)'
+                % (test_loss/(batch_index+1), 100.*correct_images/total_images, correct_images, total_images))
+        test_accuracy = 100.*correct_images/total_images
+print("accuracy of test set is",test_accuracy)
+#return test_loss/(batch_index+1)
+#out = model.forward(torch.tensor(testloader))
 
 #other way
 # plugins = pl.plugins.DDPPlugin(find_unused_parameters=False)

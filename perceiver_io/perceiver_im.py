@@ -15,7 +15,7 @@ class PerceiverLM(nn.Module):
         vocab_size: int,
         max_seq_len: int,
         embedding_dim: int,
-        num_latents: int = 256,
+        num_latents: int = 768,
         latent_dim: int = 1280,
         qk_out_dim = 8*32,
         v_out_dim = None,
@@ -37,10 +37,11 @@ class PerceiverLM(nn.Module):
         input_adapter = ImageInputAdapter(
             image_shape=image_shape,
             num_frequency_bands=num_frequency_bands)
-        embedding_dim2 = input_adapter.num_input_channels()
+        embedding_dim2 = input_adapter.num_input_channels #doubtful here
+        print("embedding dim image input is", embedding_dim2)
         #for now dont change v_out_dim and q_out_dim
         encoder = PerceiverEncoder(
-            num_latents=num_latents,
+            num_latents=256,#num_latents,
             latent_dim=latent_dim,
             input_dim=embedding_dim2,
             qk_out_dim=qk_out_dim,
@@ -55,16 +56,16 @@ class PerceiverLM(nn.Module):
         )
         output_adapter = ClassificationOutputAdapter(
             num_classes=num_classes,
-            num_output_channels=args.num_latent_channels)
-        embedding_dim1= output_adapter.output_shape()
+            num_output_channels=768) #latent_dim) #not sure on num_output_channel
+        embedding_dim1= output_adapter.output_shape
         decoder = PerceiverDecoder(
-            latent_dim=latent_dim,
-            query_dim=embedding_dim1,
-            qk_out_dim=qk_out_dim,
-            v_out_dim=embedding_dim1,
+            latent_dim=768, #latent_dim,
+            query_dim=embedding_dim1[-1],
+            qk_out_dim=768 ,#qk_out_dim,
+            #v_out_dim=embedding_dim1,
             num_heads=num_decoder_attn_heads,
             widening_factor=cross_attn_widening_factor,
-            projection_dim=None
+            #projection_dim=768#None
         )
         self.perceiver = PerceiverIO(encoder, decoder)
 
