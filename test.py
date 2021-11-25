@@ -85,65 +85,75 @@ model.load_state_dict(state_dict)
 optimizer = torch.optim.SGD(model.parameters(), lr=1e-3 , momentum=0.9, weight_decay=1e-4)
 criterion = nn.CrossEntropyLoss()
 NUM_EPOCHS = 1
-for epoch in range(NUM_EPOCHS):
-    model.train()
-    correct_images = 0
-    total_images = 0
-    training_loss = 0
-    LRlistIteration = []
-    trainLossIteration = []
-    for batch_index, (images, labels) in enumerate(trainloader):
-        optimizer.zero_grad()
-        outputs = model(images)
-        loss = criterion(outputs, labels)
-        loss.backward()
-        optimizer.step()
-        training_loss += loss.item()
-        _, predicted = outputs.max(1)
-        total_images += labels.size(0)
-        correct_images += predicted.eq(labels).sum().item()
-        print('Epoch: %d, Batch: %d, Loss: %.3f, '
-                        'Accuracy: %.3f%% (%d/%d)' % (epoch, batch_index, training_loss/(batch_index+1),
-                                                100.*correct_images/total_images, correct_images, total_images))
-        trainLossIteration.append(training_loss/(batch_index+1))
 
-for epoch in range(NUM_EPOCHS):
-    model.eval()
-    validation_running_loss = 0.0
-    total_images = 0
-    correct_images = 0
-    valLossIteration = []
-    with torch.no_grad():
-        for batch_index, (images, labels) in enumerate(validloader):
-            # images, labels = images.to(device), labels.to(device)
+def train(epoch):
+    for epoch in range(NUM_EPOCHS):
+        model.train()
+        correct_images = 0
+        total_images = 0
+        training_loss = 0
+        LRlistIteration = []
+        trainLossIteration = []
+        for batch_index, (images, labels) in enumerate(trainloader):
+            optimizer.zero_grad()
             outputs = model(images)
             loss = criterion(outputs, labels)
-            validation_running_loss += loss.item()
+            loss.backward()
+            optimizer.step()
+            training_loss += loss.item()
             _, predicted = outputs.max(1)
             total_images += labels.size(0)
             correct_images += predicted.eq(labels).sum().item()
             print('Epoch: %d, Batch: %d, Loss: %.3f, '
-                    'Accuracy: %.3f%% (%d/%d)' % (epoch, batch_index, validation_running_loss/(batch_index+1),
-                                            100.*correct_images/total_images, correct_images, total_images))
-            valLossIteration.append(validation_running_loss/(batch_index+1))
-            epoch_loss = validation_running_loss / (batch_index+1)
+                            'Accuracy: %.3f%% (%d/%d)' % (epoch, batch_index, training_loss/(batch_index+1),
+                                                    100.*correct_images/total_images, correct_images, total_images))
+            trainLossIteration.append(training_loss/(batch_index+1))
 
-model.eval()
-print(torch.tensor(inputs).size())
-test_loss = 0
-total_images = 0
-correct_images = 0
-with torch.no_grad():
-    for batch_index, (images, labels) in enumerate(testloader):
-        images, labels = images.to(device), labels.to(device)
-        outputs = model.forward(torch.tensor(images))
-        loss = criterion(outputs, labels)
-        test_loss += loss.item()
-        _, predicted = outputs.max(1)
-        total_images += labels.size(0)
-        correct_images += predicted.eq(labels).sum().item()
-        print(batch_index, len(testloader), 'Loss: %.3f | Accuracy: %.3f%% (%d/%d)'
-                % (test_loss/(batch_index+1), 100.*correct_images/total_images, correct_images, total_images))
-        test_accuracy = 100.*correct_images/total_images
-print("accuracy of test set is",test_accuracy)
+def validate(epoch):
+    for epoch in range(NUM_EPOCHS):
+        model.eval()
+        validation_running_loss = 0.0
+        total_images = 0
+        correct_images = 0
+        valLossIteration = []
+        with torch.no_grad():
+            for batch_index, (images, labels) in enumerate(validloader):
+                # images, labels = images.to(device), labels.to(device)
+                outputs = model(images)
+                loss = criterion(outputs, labels)
+                validation_running_loss += loss.item()
+                _, predicted = outputs.max(1)
+                total_images += labels.size(0)
+                correct_images += predicted.eq(labels).sum().item()
+                print('Epoch: %d, Batch: %d, Loss: %.3f, '
+                        'Accuracy: %.3f%% (%d/%d)' % (epoch, batch_index, validation_running_loss/(batch_index+1),
+                                                100.*correct_images/total_images, correct_images, total_images))
+                valLossIteration.append(validation_running_loss/(batch_index+1))
+                epoch_loss = validation_running_loss / (batch_index+1)
+
+def test():
+    model.eval()
+    print(torch.tensor(inputs).size())
+    test_loss = 0
+    total_images = 0
+    correct_images = 0
+    with torch.no_grad():
+        for batch_index, (images, labels) in enumerate(testloader):
+            images, labels = images.to(device), labels.to(device)
+            outputs = model.forward(torch.tensor(images))
+            loss = criterion(outputs, labels)
+            test_loss += loss.item()
+            _, predicted = outputs.max(1)
+            total_images += labels.size(0)
+            correct_images += predicted.eq(labels).sum().item()
+            print(batch_index, len(testloader), 'Loss: %.3f | Accuracy: %.3f%% (%d/%d)'
+                    % (test_loss/(batch_index+1), 100.*correct_images/total_images, correct_images, total_images))
+            test_accuracy = 100.*correct_images/total_images
+    print("accuracy of test set is",test_accuracy)
+
+train(epoch)
+# validate(epoch)
+# test()
+
+
 
