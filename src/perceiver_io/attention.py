@@ -1,7 +1,6 @@
 from typing import Optional
 
 import torch
-from einops import rearrange
 from torch import nn
 
 
@@ -52,6 +51,12 @@ class MultiHeadAttention(nn.Module):
         self.dropout = nn.Dropout(dropout)
         self.scale = self.qk_head_dim ** -0.5
 
+    def transform_for_scores(self, x: torch.Tensor, head_dim: int):
+        # (..., seq_len, dim) -> (..., n_heads, seq_len, head_dim)
+        *dims, seq, hid = x.size()
+        x = x.view(*dims, seq, self.num_heads, head_dim)
+        return x.transpose(-3, -2)
+
     def forward(
         self,
         inputs_kv: torch.Tensor,
@@ -60,18 +65,18 @@ class MultiHeadAttention(nn.Module):
     ):
         """
         Args:
-            inputs_kv: Key/Value embeddings of shape (B, M, C).
-            inputs_q: Query embeddings of shape (B, N, D)
-            attention_mask: Tensor of shape (B, N, M).
+            inputs_kv: Key/Value embeddings of shape (B, ..., M, C).
+            inputs_q: Query embeddings of shape (B, ..., N, D)
+            attention_mask: Tensor of shape (B, ..., N, M).
 
         Returns:
-            Tensor of shape (B, N, D)
+            Tensor of shape (B, ..., N, D)
         """
-        k, q, v = self.k(inputs_kv), self.q(inputs_q), self.v(inputs_kv)
-        k = rearrange(k, 'b s (n h) -> b n s h', h=self.qk_head_dim)
-        q = rearrange(q, 'b s (n h) -> b n s h', h=self.qk_head_dim)
-        v = rearrange(v, 'b s (n h) -> b n s h', h=self.v_head_dim)
-        attention = (q @ k.transpose(-2, -1) * self.scale)
+        keys, queries, values = self.k(inputs_kv), self.q(inputs_q), self.v(inputs_kv)
+        keys = self.transform_for_scores(keys, self.qk_head_dim)
+        queries = self.transform_for_scores(queries, self.qk_head_dim)
+        values = self.transform_for_scores(values, self.v_head_dim)
+        attention = (queries @ keys.transpose(-2, -1) * self.scale)
         if attention_mask is not None:
             min_value = torch.finfo(attention.dtype).min
             extended_mask = (1 - attention_mask) * min_value
@@ -80,7 +85,11 @@ class MultiHeadAttention(nn.Module):
         attention = self.dropout(attention)
         if attention_mask is not None:
             attention = attention.masked_fill(1 - attention_mask, value=0)
-        weighted = rearrange(attention @ v, 'b n s h -> b s (n h)')
+        weighted = attention @ values
+        # (..., n_heads, seq_len, head_dim) -> (..., seq_len, hid)
+        *dims, n_heads, seq, hid = weighted.size()
+        weighted = weighted.transpose(-3, -2)
+        weighted = weighted.reshape(*dims, seq, n_heads * hid)
         return self.projection(weighted)
 
 
@@ -160,8 +169,8 @@ class SelfAttention(nn.Module):
     ):
         """
         Args:
-            x: Input tensor of shape (B, M, C).
-            attention_mask: Input mask tensor of shape (B, M, M).
+            x: Input tensor of shape (B, ..., M, C).
+            attention_mask: Input mask tensor of shape (B, ..., M, M).
                 Mask values selected in [0, 1]. Defaults to None.
         """
         x_norm = self.layer_norm(x)
@@ -233,9 +242,9 @@ class CrossAttention(nn.Module):
     ):
         """
         Args:
-            inputs_kv: Key/Value embeddings of shape (B, M, C).
-            inputs_q: Query embeddings of shape (B, N, D)
-            attention_mask: Tensor of shape (B, N, M). Mask values selected
+            inputs_kv: Key/Value embeddings of shape (B, ..., M, C).
+            inputs_q: Query embeddings of shape (B, ..., N, D)
+            attention_mask: Tensor of shape (B, ..., N, M). Mask values selected
                 in [0, 1]. Defaults to None.
         """
         attention = self.attention(
